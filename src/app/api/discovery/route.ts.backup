@@ -1,0 +1,64 @@
+import { NextResponse } from "next/server";
+import {
+  discoverTradeCompanies,
+  type TradeDiscoveryMode,
+} from "@/lib/connectors/trade-data";
+
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url);
+
+  const query = searchParams.get("q")?.trim();
+  const mode = searchParams.get("mode") as TradeDiscoveryMode | null;
+  const hsCode = searchParams.get("hsCode")?.trim() || null;
+  const country = searchParams.get("country")?.trim() || null;
+
+  if (!query) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Please provide a product or search term.",
+      },
+      { status: 400 }
+    );
+  }
+
+  if (mode !== "buyers" && mode !== "suppliers") {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Discovery mode must be buyers or suppliers.",
+      },
+      { status: 400 }
+    );
+  }
+
+  try {
+    const result = await discoverTradeCompanies({
+      mode,
+      query,
+      hsCode,
+      country,
+    });
+
+    return NextResponse.json({
+      ok: true,
+      mode,
+      query,
+      hsCode,
+      country,
+      sourceStatus: result.status,
+      results: result.data?.results ?? [],
+      resultCount: result.data?.totalResults ?? 0,
+      evidence: result.evidence,
+      error: result.error ?? null,
+    });
+  } catch {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "Unable to connect to the trade discovery service.",
+      },
+      { status: 502 }
+    );
+  }
+}

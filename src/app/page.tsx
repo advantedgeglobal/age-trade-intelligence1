@@ -1,13 +1,101 @@
+"use client";
+
+import type { SearchMode } from "@/lib/intelligence/types";
+
+import { useState } from "react";
+import { SEARCH_MODES } from "@/lib/intelligence/search-modes";
+
+type CompanyResult = {
+  lei: string | null;
+  legalName: string | null;
+  country: string | null;
+  city: string | null;
+  region: string | null;
+  postalCode: string | null;
+  registeredAs: string | null;
+  jurisdiction: string | null;
+  entityStatus: string | null;
+  leiStatus: string | null;
+  source: string;
+  relevanceScore?: number;
+};
+
+type SearchResponse = {
+  ok: boolean;
+  query?: string;
+  resultCount?: number;
+  totalResults?: number;
+  results?: CompanyResult[];
+  error?: string;
+};
+
 export default function Home() {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<CompanyResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [mode, setMode] = useState<SearchMode>("company");
+
+  async function handleSearch() {
+    const search = query.trim();
+
+    if (!search) {
+      setMessage("Enter a company name to search.");
+      setResults([]);
+      return;
+    }
+
+    setLoading(true);
+    setMessage("");
+    setResults([]);
+
+    if (mode !== "company") {
+      setLoading(false);
+      setMessage(
+        mode === "buyers"
+          ? "Buyer discovery is being connected to global trade data."
+          : "Supplier discovery is being connected to global trade data."
+      );
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `/api/company-search?q=${encodeURIComponent(search)}`
+      );
+
+      const data = (await response.json()) as SearchResponse;
+
+      if (!response.ok || !data.ok) {
+        setMessage(data.error ?? "Company search failed.");
+        return;
+      }
+
+      if (!data.results || data.results.length === 0) {
+        setMessage(`No GLEIF results found for "${search}".`);
+        return;
+      }
+
+      setResults(data.results);
+      setMessage(
+        `Found ${data.totalResults ?? data.results.length} result(s) for "${search}".`
+      );
+    } catch {
+      setMessage("Unable to connect to the company search service.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <div className="mx-auto max-w-7xl px-6 py-10 lg:px-8">
-        {/* Header */}
         <header className="flex items-center justify-between border-b border-white/10 pb-8">
           <div>
             <p className="text-sm font-medium uppercase tracking-[0.25em] text-cyan-400">
               AdvantEdge Global Enterprises
             </p>
+
             <h1 className="mt-2 text-2xl font-semibold tracking-tight">
               AGE Trade Intelligence
             </h1>
@@ -18,7 +106,6 @@ export default function Home() {
           </div>
         </header>
 
-        {/* Hero */}
         <section className="py-20 text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.3em] text-cyan-400">
             Global • Intelligence • Due Diligence
@@ -38,37 +125,116 @@ export default function Home() {
             lawful data sources around the world.
           </p>
 
-          {/* Search */}
           <div className="mx-auto mt-10 max-w-3xl">
             <div className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-white/5 p-3 shadow-2xl sm:flex-row">
               <input
                 type="text"
-                placeholder="Search a company, registration number, website, email, phone, person, or product..."
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    handleSearch();
+                  }
+                }}
+                placeholder={SEARCH_MODES.find((item) => item.id === mode)?.placeholder ?? "Search..."}
                 className="min-h-14 flex-1 rounded-xl border border-white/10 bg-slate-900 px-5 text-white outline-none placeholder:text-slate-500 focus:border-cyan-400"
               />
 
-              <button className="min-h-14 rounded-xl bg-cyan-400 px-8 font-semibold text-slate-950 transition hover:bg-cyan-300">
-                Search
+              <button
+                onClick={handleSearch}
+                disabled={loading}
+                className="min-h-14 rounded-xl bg-cyan-400 px-8 font-semibold text-slate-950 transition hover:bg-cyan-300 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {loading ? "Searching..." : "Search"}
               </button>
             </div>
 
-            {/* Search modes */}
             <div className="mt-5 flex flex-wrap justify-center gap-2">
-              {["Companies", "Buyers", "Suppliers", "Products", "Trade"].map(
-                (mode) => (
-                  <button
-                    key={mode}
-                    className="rounded-full border border-white/10 bg-white/5 px-5 py-2 text-sm text-slate-300 transition hover:border-cyan-400 hover:text-white"
-                  >
-                    {mode}
-                  </button>
-                )
-              )}
+              {SEARCH_MODES.map((searchMode) => (
+                <button
+                  key={searchMode.id}
+                  onClick={() => {
+                    setMode(searchMode.id);
+                    setMessage("");
+                    setResults([]);
+                  }}
+                  className={`rounded-full border px-5 py-2 text-sm transition ${
+                    mode === searchMode.id
+                      ? "border-cyan-400 bg-cyan-400 text-slate-950"
+                      : "border-white/10 bg-white/5 text-slate-300 hover:border-cyan-400 hover:text-white"
+                  }`}
+                >
+                  {searchMode.id === "company"
+                    ? "Companies"
+                    : searchMode.id === "buyers"
+                      ? "Buyers"
+                      : "Suppliers"}
+                </button>
+              ))}
             </div>
+
+            {message && (
+              <div className="mt-6 rounded-xl border border-cyan-400/20 bg-cyan-400/5 px-5 py-4 text-sm text-cyan-200">
+                {message}
+              </div>
+            )}
           </div>
         </section>
 
-        {/* Main actions */}
+        {results.length > 0 && (
+          <section className="mb-16">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="text-2xl font-semibold">Company Results</h2>
+
+              <span className="text-sm text-slate-500">
+                Source: GLEIF
+              </span>
+            </div>
+
+            <div className="grid gap-4">
+              {results.map((company) => (
+                <div
+                  key={company.lei ?? `${company.legalName}-${company.registeredAs}`}
+                  className="rounded-2xl border border-white/10 bg-white/[0.04] p-6"
+                >
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <h3 className="text-xl font-semibold text-white">
+                        {company.legalName ?? "Unknown legal name"}
+                      </h3>
+
+                      <p className="mt-2 text-sm text-slate-400">
+                        {company.city ?? "Unknown city"}
+                        {company.country ? `, ${company.country}` : ""}
+                      </p>
+                    </div>
+
+                    <div className="rounded-full border border-cyan-400/20 bg-cyan-400/5 px-3 py-1 text-xs text-cyan-300">
+                      {company.leiStatus ?? "Unknown LEI status"}
+                    </div>
+                  </div>
+
+                  <div className="mt-5 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
+                    <Detail label="LEI" value={company.lei} />
+                    <Detail
+                      label="Registration"
+                      value={company.registeredAs}
+                    />
+                    <Detail
+                      label="Jurisdiction"
+                      value={company.jurisdiction}
+                    />
+                    <Detail
+                      label="Entity Status"
+                      value={company.entityStatus}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
         <section className="grid gap-5 md:grid-cols-3">
           <ActionCard
             title="Search Company"
@@ -86,7 +252,6 @@ export default function Home() {
           />
         </section>
 
-        {/* Intelligence areas */}
         <section className="mt-16 grid gap-5 border-t border-white/10 pt-10 sm:grid-cols-2 lg:grid-cols-4">
           <InfoCard
             title="Trade Intelligence"
@@ -109,12 +274,31 @@ export default function Home() {
           />
         </section>
 
-        {/* Footer */}
         <footer className="mt-20 border-t border-white/10 py-8 text-sm text-slate-500">
           AGE Trade Intelligence • AdvantEdge Global Enterprises
         </footer>
       </div>
     </main>
+  );
+}
+
+function Detail({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null;
+}) {
+  return (
+    <div>
+      <p className="text-xs uppercase tracking-wider text-slate-500">
+        {label}
+      </p>
+
+      <p className="mt-1 break-all text-slate-300">
+        {value ?? "—"}
+      </p>
+    </div>
   );
 }
 
@@ -152,7 +336,10 @@ function InfoCard({
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-6">
       <h3 className="font-semibold">{title}</h3>
-      <p className="mt-3 text-sm leading-6 text-slate-500">{text}</p>
+
+      <p className="mt-3 text-sm leading-6 text-slate-500">
+        {text}
+      </p>
     </div>
   );
 }

@@ -286,11 +286,14 @@ export async function GET(request: Request) {
               operating: [],
             },
 
-            contact: {
-              website: null,
-              emails: [],
-              phones: [],
-            },
+contact: {
+  website: null,
+  domains: [],
+  emails: [],
+  phones: [],
+},
+
+            products: [],
 
             people: [],
 
@@ -299,7 +302,7 @@ export async function GET(request: Request) {
               currency: null,
               assets: null,
               liabilities: null,
-              netIncome: null,
+             netIncome: null,
               fiscalYear: null,
               sourceUrl: null,
             },

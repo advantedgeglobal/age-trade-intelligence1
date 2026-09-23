@@ -18,6 +18,7 @@ export type CompanyProfile = {
 
   contact: {
     website: string | null;
+    domains: string[];
     emails: string[];
     phones: string[];
   };
@@ -25,6 +26,12 @@ export type CompanyProfile = {
   people: {
     name: string;
     role: string | null;
+    sourceUrl: string | null;
+  }[];
+
+  products: {
+    name: string;
+    hsCode: string | null;
     sourceUrl: string | null;
   }[];
 

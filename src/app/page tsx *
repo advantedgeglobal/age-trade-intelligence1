@@ -64,7 +64,6 @@ type SearchResponse = {
 export default function Home() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CompanyResult[]>([]);
-const [tradeResults, setTradeResults] = useState<TradeResult[]>([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [mode, setMode] = useState<SearchMode>("company");
@@ -81,41 +80,16 @@ const [tradeResults, setTradeResults] = useState<TradeResult[]>([]);
     setLoading(true);
     setMessage("");
     setResults([]);
-setTradeResults([]);
 
-if (mode !== "company") {
-  try {
-    const response = await fetch(
-      `/api/discovery?q=${encodeURIComponent(search)}&mode=${mode}`
-    );
-
-    const data = (await response.json()) as DiscoveryResponse;
-
-    if (!response.ok || !data.ok) {
-      setMessage(data.error ?? "Trade discovery failed.");
-      return;
-    }
-
-    setTradeResults(data.results ?? []);
-
-    if (!data.results || data.results.length === 0) {
+    if (mode !== "company") {
+      setLoading(false);
       setMessage(
-        `No trade discovery results found for "${search}".`
+        mode === "buyers"
+          ? "Buyer discovery is being connected to global trade data."
+          : "Supplier discovery is being connected to global trade data."
       );
       return;
     }
-
-    setMessage(
-      `Found ${data.resultCount ?? data.results.length} trade record(s) for "${search}".`
-    );
-  } catch {
-    setMessage("Unable to connect to the trade discovery service.");
-  } finally {
-    setLoading(false);
-  }
-
-  return;
-}
 
     try {
       const response = await fetch(
@@ -293,86 +267,7 @@ if (mode !== "company") {
           </section>
         )}
 
- 
-        {tradeResults.length > 0 && (
-          <section className="mb-16">
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-2xl font-semibold">
-                {mode === "buyers" ? "Buyer Discovery" : "Supplier Discovery"}
-              </h2>
-
-              <span className="text-sm text-slate-500">
-                Source: UN Comtrade
-              </span>
-            </div>
-
-            <div className="grid gap-4">
-              {tradeResults.map((trade, index) => (
-                <div
-                  key={`${trade.reporterCode}-${trade.partnerCode}-${trade.hsCode}-${index}`}
-                  className="rounded-2xl border border-white/10 bg-white/[0.04] p-6"
-                >
-                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                    <div>
-                      <h3 className="text-xl font-semibold text-white">
-                        {trade.partnerName ?? "Unknown trading partner"}
-                      </h3>
-
-                      <p className="mt-2 text-sm text-slate-400">
-                        {mode === "buyers"
-                          ? `Importer / trading partner associated with ${trade.reporterName ?? "unknown reporter"}`
-                          : `Exporter / trading partner associated with ${trade.reporterName ?? "unknown reporter"}`}
-                      </p>
-                    </div>
-
-                    <div className="rounded-full border border-cyan-400/20 bg-cyan-400/5 px-3 py-1 text-xs text-cyan-300">
-                      {trade.flow}
-                    </div>
-                  </div>
-
-                  <div className="mt-5 grid gap-4 text-sm sm:grid-cols-2 lg:grid-cols-4">
-                    <Detail label="HS Code" value={trade.hsCode} />
-                    <Detail label="Period" value={trade.period} />
-                    <Detail
-                      label="Trade Value"
-                      value={
-                        trade.tradeValue !== null
-                          ? trade.tradeValue.toLocaleString()
-                          : null
-                      }
-                    />
-                    <Detail
-                      label="Net Weight"
-                      value={
-                        trade.netWeight !== null
-                          ? trade.netWeight.toLocaleString()
-                          : null
-                      }
-                    />
-                  </div>
-
-                  <div className="mt-5 rounded-xl border border-white/10 bg-slate-900/50 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                      Discovery Evidence
-                    </p>
-
-                    <p className="mt-2 text-sm text-slate-300">
-                      {trade.discoveryReason?.[0] ??
-                        "Country-level trade evidence found."}
-                    </p>
-
-                    <p className="mt-2 text-xs text-amber-300">
-                      Country-level trade data does not by itself identify an
-                      individual buyer or supplier.
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        )}
-
-       <section className="grid gap-5 md:grid-cols-3">
+        <section className="grid gap-5 md:grid-cols-3">
           <ActionCard
             title="Search Company"
             description="Investigate a company using name, registration number, LEI, website, email, phone, or person."

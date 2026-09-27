@@ -156,6 +156,7 @@ function scoreCompany(name: string, query: string, legalForm?: string | null) {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("q")?.trim();
+  const country = searchParams.get("country")?.trim().toUpperCase() || null;
 
   if (!query) {
     return NextResponse.json(
@@ -172,6 +173,7 @@ export async function GET(request: Request) {
 
     params.set("filter[fulltext]", query);
     params.set("page[size]", "50");
+    if (country) params.set("filter[entity.legalAddress.country]", country);
 
     const gleifUrl =
       `https://api.gleif.org/api/v1/lei-records?${params.toString()}`;

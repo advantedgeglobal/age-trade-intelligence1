@@ -79,6 +79,7 @@ type DDResponse = {
     addresses?: {
       registered?: Record<string, unknown> | null;
       headquarters?: Record<string, unknown> | null;
+      operating?: unknown[];
     };
     contact?: {
       website?: string | null;
@@ -103,7 +104,20 @@ type DDResponse = {
       listed?: boolean | null;
       details?: string[];
     };
+    legal?: {
+      courtRecords?: unknown[];
+      insolvencyRecords?: unknown[];
+      regulatoryActions?: unknown[];
+    };
     riskIndicators?: string[];
+    evidence?: Array<{
+      sourceName?: string;
+      sourceType?: string;
+      sourceUrl?: string | null;
+      collectedAt?: string;
+      evidence?: string;
+      confidence?: string;
+    }>;
   };
   investigationStatus?: Record<string, string>;
   error?: string;
@@ -560,6 +574,20 @@ export default function Home() {
                 />
 
                 <DDCard
+                  title="Addresses"
+                  items={[
+                    [
+                      "Registered",
+                      formatAddress(dd.company.addresses?.registered),
+                    ],
+                    [
+                      "Headquarters",
+                      formatAddress(dd.company.addresses?.headquarters),
+                    ],
+                  ]}
+                />
+
+                <DDCard
                   title="Financial"
                   items={[
                     ["Revenue", dd.company.financial?.revenue],
@@ -603,6 +631,30 @@ export default function Home() {
                     ([name, status]) => [name, status]
                   )}
                 />
+
+                <DDCard
+                  title="Risk indicators"
+                  items={
+                    (dd.company.riskIndicators ?? []).length > 0
+                      ? (dd.company.riskIndicators ?? []).map((item, index) => [
+                          `Indicator ${index + 1}`,
+                          item,
+                        ])
+                      : [["Current result", "No risk indicator has been asserted by the connected sources."]]
+                  }
+                />
+
+                <DDCard
+                  title="Evidence"
+                  items={
+                    (dd.company.evidence ?? []).length > 0
+                      ? (dd.company.evidence ?? []).map((item, index) => [
+                          `${item.sourceName ?? "Source"} #${index + 1}`,
+                          item.evidence ?? "Evidence record available",
+                        ])
+                      : [["Sources", "No evidence records returned."]]
+                  }
+                />
               </div>
             )}
 
@@ -642,6 +694,22 @@ export default function Home() {
       </div>
     </main>
   );
+}
+
+function formatAddress(address: Record<string, unknown> | null | undefined) {
+  if (!address) return null;
+
+  const parts = [
+    ...(Array.isArray(address.addressLines) ? address.addressLines : []),
+    address.city,
+    address.region,
+    address.postalCode,
+    address.country,
+  ]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .map((value) => value.trim());
+
+  return parts.length ? parts.join(", ") : null;
 }
 
 function Detail({

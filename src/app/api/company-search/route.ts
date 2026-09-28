@@ -68,6 +68,7 @@ type CompanyResult = {
   sourceUrl: string | null;
   relevanceScore: number;
   evidence: ReturnType<typeof createEvidenceItem>[];
+  profile: CompanyProfile;
 };
 
 function normalize(value: string | null | undefined) {

@@ -158,7 +158,10 @@ export default function Home() {
   const [hsCode, setHsCode] = useState("");
   const [selectedCompany, setSelectedCompany] = useState<CompanyResult | null>(null);
   const [dd, setDd] = useState<DDResponse | null>(null);
-  const [ddLoading, setDdLoading] = useState(false);\n\n  // DD UI is intentionally defensive: connected sources may omit optional arrays.\n
+  const [ddLoading, setDdLoading] = useState(false);
+
+  // DD UI is intentionally defensive: connected sources may omit optional arrays.
+
 
   function resetResults() {
     setResults([]);
